@@ -11,10 +11,6 @@ import '@mdi/font/css/materialdesignicons.css'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-//eCharts
-import '@/plugins/echarts'
-import './../node_modules/bulma/css/bulma.css'
-
 const app = createApp(App);
 
 const vuetify = createVuetify({
