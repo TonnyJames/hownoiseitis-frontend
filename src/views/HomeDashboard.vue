@@ -1,12 +1,15 @@
 <template>
-  <div id="chartLine"></div>
+  <div style="justify-content: flex-start">
+  <div id="chartLine" ></div>
   <div id="chartGauge"></div>
+  </div>
 </template>
 
 <script>
 import * as echarts from 'echarts/core';
 import {CanvasRenderer} from "echarts/renderers";
-import {LineChart, GaugeChart} from "echarts/charts";
+import {LineChart, GaugeChart, BarChart} from "echarts/charts";
+import {UniversalTransition} from 'echarts/features';
 import api from "@/config/AxiosConfig";
 import {
   DataZoomComponent,
@@ -14,24 +17,26 @@ import {
   LegendComponent,
   TitleComponent,
   ToolboxComponent,
-  TooltipComponent
+  TooltipComponent,
 } from "echarts/components";
 
 echarts.use([
   CanvasRenderer,
   LineChart,
   GaugeChart,
+  BarChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
   ToolboxComponent,
   GridComponent,
   DataZoomComponent,
+  UniversalTransition
 ]);
 export default {
   created() {
     setTimeout(() => this.createChartLine(), 1000)
-    setTimeout(() => this.createChartGauge(), 2000)
+    setTimeout(() => this.createChartGauge(), 1000)
   },
   methods: {
     async createChartLine() {
@@ -54,22 +59,28 @@ export default {
       let optionLine = {
         tooltip: {
           trigger: 'axis',
-          position: function (pt) {
-            return [pt[0], '10%'];
-          }
+          axisPointer: {
+            type: "cross",
+            label: {
+              backgroundColor: "#283b56"
+            }
+          },
         },
         title: {
-          left: 'center',
-          text: 'Decibéis'
+          text: 'Histórico Decibéis'
         },
-
+        legend: {},
         toolbox: {
+          show: true,
           feature: {
-            dataZoom: {
-              yAxisIndex: 'none'
-            },
+            dataView: {readOnly: false},
             restore: {},
             saveAsImage: {}
+          },
+          dataZoom: {
+            show: false,
+            start: 0,
+            end: 100
           }
         },
         xAxis: {
@@ -78,6 +89,7 @@ export default {
         },
         yAxis: {
           type: 'value',
+          name: "dBs",
 
         },
         dataZoom: [
@@ -94,15 +106,30 @@ export default {
         series: [
           {
             name: 'dados do mongoDb',
-            type: 'line',
-            smooth: true,
-            symbol: 'none',
-            areaStyle: {},
+            type: 'bar',
+            data: data
+          },
+          {
+            name: "Dynamic Line",
+            type: "line",
             data: data
           }
         ],
-
       };
+      setInterval(async function () {
+        const res = await api.get("/consultar-medicoes/ultima/");
+        data.shift();
+        data.push([+new Date(res.data.data), res.data.valor])
+        myChart.setOption({
+          series: [{
+            data: data
+          },
+            {
+              data: data
+            }
+          ]
+        });
+      }, 5000);
 
       if (optionLine && typeof optionLine === 'object') {
         myChart.setOption(optionLine)
@@ -122,6 +149,10 @@ export default {
       let newValue = 0
 
       let optionGauge = {
+        title: {
+          text: 'Último valor medido',
+          left: 'center',
+        },
         series: [
           {
             type: 'gauge',
