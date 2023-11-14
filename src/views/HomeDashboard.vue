@@ -1,10 +1,3 @@
-<template>
-  <div style="justify-content: flex-start">
-  <div id="chartLine" ></div>
-  <div id="chartGauge"></div>
-  </div>
-</template>
-
 <script>
 import * as echarts from 'echarts/core';
 import {CanvasRenderer} from "echarts/renderers";
@@ -19,6 +12,7 @@ import {
   ToolboxComponent,
   TooltipComponent,
 } from "echarts/components";
+import {nextTick, ref} from "vue";
 
 echarts.use([
   CanvasRenderer,
@@ -34,6 +28,8 @@ echarts.use([
   UniversalTransition
 ]);
 export default {
+
+
   created() {
     setTimeout(() => this.createChartLine(), 1000)
     setTimeout(() => this.createChartGauge(), 1000)
@@ -41,7 +37,7 @@ export default {
   methods: {
     async createChartLine() {
       let chartDom = document.getElementById('chartLine');
-      let myChart = echarts.init(chartDom, null, {
+      let myChartLine = echarts.init(chartDom, null, {
         renderer: 'canvas',
         height: 400,
         width: 700
@@ -55,6 +51,14 @@ export default {
       valores.forEach(item => {
         data.push([+new Date(item.data), item.valor]);
       })
+
+      let nomeDoDispositivo;
+      if (data.length !== 0) {
+        nomeDoDispositivo = data[0].nomeDispositivo
+      } else {
+        nomeDoDispositivo = 'nome do dispositivo'
+      }
+
 
       let optionLine = {
         tooltip: {
@@ -105,44 +109,59 @@ export default {
         ],
         series: [
           {
-            name: 'dados do mongoDb',
+            name: nomeDoDispositivo,
             type: 'bar',
+            itemStyle: {
+              color: '#FFAB91'
+            },
             data: data
           },
           {
-            name: "Dynamic Line",
+            name: nomeDoDispositivo,
             type: "line",
+            itemStyle: {
+              color: '#2FF503',
+            },
             data: data
           }
         ],
       };
       setInterval(async function () {
         const res = await api.get("/consultar-medicoes/ultima/");
-        data.shift();
-        data.push([+new Date(res.data.data), res.data.valor])
-        myChart.setOption({
-          series: [{
-            data: data
-          },
-            {
+
+        let utimaMedicao = data[data.length - 1][0]
+        let atualMedicao = +new Date(res.data.data)
+
+        if (atualMedicao !== utimaMedicao) {
+          data.shift();
+          data.push([+new Date(res.data.data), res.data.valor])
+          nomeDoDispositivo = res.data.nomeDispositivo
+          myChartLine.setOption({
+            series: [{
+              name: nomeDoDispositivo,
               data: data
-            }
-          ]
-        });
+            },
+              {
+                name: nomeDoDispositivo,
+                data: data
+              }
+            ]
+          });
+        }
       }, 5000);
 
       if (optionLine && typeof optionLine === 'object') {
-        myChart.setOption(optionLine)
+        myChartLine.setOption(optionLine)
       }
-      window.addEventListener('resize', myChart.resize);
+      window.addEventListener('resize', myChartLine.resize);
     },
 
     async createChartGauge() {
 
       let chartDom = document.getElementById('chartGauge');
-      let myChart = echarts.init(chartDom, null, {
+      let myChartGauge = echarts.init(chartDom, null, {
         height: 400,
-        width: 700
+        width: 700,
       })
 
       let oldValue = 0
@@ -266,7 +285,8 @@ export default {
 
         oldValue = newValue
         newValue = res.data.valor;
-        myChart.setOption({
+
+        myChartGauge.setOption({
           series: [{
             data: [{
               value: newValue
@@ -282,19 +302,66 @@ export default {
       }, 2000);
 
       if (optionGauge && typeof optionGauge === 'object') {
-        myChart.setOption(optionGauge)
+        myChartGauge.setOption(optionGauge)
       }
-      window.addEventListener('resize', myChart.resize);
+      window.addEventListener('resize', myChartGauge.resize);
 
     }
   }
 }
 
+
 </script>
 
+<template>
+  <v-container>
+    <div class="container">
+      <div id="chartLine"></div>
+      <div id="chartGauge"></div>
+    </div>
+<!--    <div id="alert">-->
+
+<!--      <v-alert v-if="this.ultimaMedicao < 50"-->
+<!--               id="success"-->
+<!--               border="top"-->
+<!--               variant="outlined"-->
+<!--               color=green-->
+<!--               type=success-->
+<!--               title="Status de Barulho"-->
+<!--               text=""-->
+<!--      ></v-alert>-->
+<!--      <v-alert v-else-if="this.ultimaMedicao > 50 && this.ultimaMedicao< 75"-->
+<!--               id="warning"-->
+<!--               border="top"-->
+<!--               variant="outlined"-->
+<!--               color=yellow-->
+<!--               type=warning-->
+<!--               title="Status de Barulho"-->
+<!--               text=""-->
+<!--      ></v-alert>-->
+<!--      <v-alert v-else-->
+<!--               id="error"-->
+<!--               border="top"-->
+<!--               variant="outlined"-->
+<!--               color=red-->
+<!--               type=error-->
+<!--               title="Status de Barulho"-->
+<!--               text=""-->
+<!--      ></v-alert>-->
+<!--    </div>-->
+  </v-container>
+</template>
+
 <style scoped>
-.chart {
-  height: 30vh;
-  width: 100vh;
+.container {
+  display: inline-flex;
+
 }
+
+#alert {
+  display: inline-block;
+  width: 85%;
+  margin-left: 50px;
+}
+
 </style>
